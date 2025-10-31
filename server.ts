@@ -135,6 +135,7 @@ const pool = new Pool({
   database: process.env.DB_NAME,
   password: process.env.DB_PASSWORD,
   port: Number(process.env.DB_PORT) || 5432,
+  ssl: { rejectUnauthorized: false }
 });
 
 
@@ -1277,5 +1278,5 @@ const PORT = process.env.PORT || 3001;
 
 const BACKEND_URL = process.env.BACKEND_URL || `http://localhost:${PORT}`;
 
-app.listen(PORT, () => console.log(`BackEnd: ${BACKEND_URL}/api/products`));
+app.listen(PORT, () => console.log(`BackEnd: ${BACKEND_URL}api/products`));
 
