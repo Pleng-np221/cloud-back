@@ -199,7 +199,7 @@ app.post('/api/signup', async (req, res) => {
       const result = await pool.query(query, values);
 
       req.session.user = email;
-      res.json({ message: 'Signup successful', user: result.rows[0] });
+      res.json({ message: 'Signup successful', redirect: '/Login' });
     } catch (err: any) {
       console.error(err);
       res.status(400).json({ message: err.detail || 'Signup failed' });
@@ -747,34 +747,31 @@ app.post("/api/cart/remove", requireLogin, async (req, res) => {
 
 app.post("/api/cart/add-custom", uploadCustom.single("customImage"), requireLogin, async (req, res) => {
   try {
-    const { user, profile, keyColor, textColor, customText, notes } = req.body;
+    const userEmail = req.session.user?.email; // <- from login session
+    if (!userEmail) return res.status(401).json({ error: "Not logged in" });
 
-    // Image, just in case na
+    const { profile, keyColor, textColor, customText, notes } = req.body;
     const imagePath = req.file ? `/uploads/custom_products/${req.file.filename}` : "";
-
-    // Get price from main_productdetail
     const priceRes = await pool.query(
       `SELECT price FROM main_productdetail WHERE "productID"='KC_CUSTOM' LIMIT 1`
     );
     const customPrice = priceRes.rows[0]?.price ?? 0;
 
-    // Insert to main_customproduct
     const result = await pool.query(
       `INSERT INTO main_customproduct 
         (user_id, profile, "keyColor", "textColor", "customText", notes, "customImage", price)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
        RETURNING id`,
-      [user, profile, keyColor, textColor, customText, notes, imagePath, customPrice]
+      [userEmail, profile, keyColor, textColor, customText, notes, imagePath, customPrice]
     );
 
     const newCustomId = result.rows[0].id;
 
-    // Add to cart
     await pool.query(
       `INSERT INTO main_customercart 
         (email_id, product_id, quantities, custom_product_id, "customValue")
        VALUES ($1, $2, $3, $4, $5)`,
-      [user, "KC_CUSTOM", 1, newCustomId, `${profile}_${keyColor}_${textColor}_${customText}`]
+      [userEmail, "KC_CUSTOM", 1, newCustomId, `${profile}_${keyColor}_${textColor}_${customText}`]
     );
 
     res.json({
@@ -790,6 +787,7 @@ app.post("/api/cart/add-custom", uploadCustom.single("customImage"), requireLogi
     res.status(500).json({ error: "Failed to create custom keycap" });
   }
 });
+
 
 // order
 const query_orders = `
