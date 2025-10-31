@@ -1294,5 +1294,5 @@ const PORT = process.env.PORT || 3001;
 
 const BACKEND_URL = process.env.BACKEND_URL || `http://localhost:${PORT}`;
 
-app.listen(PORT, () => console.log(`BackEnd: ${BACKEND_URL}api/products`));
+app.listen(PORT, () => console.log(`BackEnd: ${BACKEND_URL}/api/products`));
 
