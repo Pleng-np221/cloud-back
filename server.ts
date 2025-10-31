@@ -81,7 +81,23 @@ const app = express();
 
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
 
-app.use(cors({ origin: FRONTEND_URL, credentials: true }));
+const allowedOrigins = [
+  "http://localhost:5173",
+  "http://44.222.93.126:5173"
+];
+
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
+  credentials: true,
+}));
+
+
 app.use(express.json());
 
 const session = require("express-session");
