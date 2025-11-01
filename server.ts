@@ -15,6 +15,7 @@ const s3 = new S3Client({
   credentials: {
     accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+    sessionToken: process.env.AWS_SESSION_TOKEN!,
   },
 });
 
@@ -23,7 +24,7 @@ const uploadS3 = multer({
     s3,
     bucket: process.env.AWS_BUCKET_NAME!,
     contentType: multerS3.AUTO_CONTENT_TYPE,
-    acl: "public-read",
+    // acl removed
     key: (req, file, cb) => {
       const timestamp = Date.now();
       const ext = path.extname(file.originalname);
@@ -37,7 +38,6 @@ const uploadProduct = multer({
   storage: multerS3({
     s3,
     bucket: process.env.AWS_BUCKET_NAME!,
-    acl: "public-read",
     contentType: multerS3.AUTO_CONTENT_TYPE,
     key: (req, file, cb) => {
       const timestamp = Date.now();
@@ -52,8 +52,8 @@ const upload = multer({
   storage: multerS3({
     s3,
     bucket: process.env.AWS_BUCKET_NAME!,
-    acl: "public-read",
     contentType: multerS3.AUTO_CONTENT_TYPE,
+    // acl removed
     key: (req, file, cb) => {
       const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
       const ext = path.extname(file.originalname);
@@ -66,13 +66,14 @@ const uploadCustom = multer({
   storage: multerS3({
     s3: s3,
     bucket: process.env.AWS_BUCKET_NAME!,
-    acl: "public-read",
+    // acl removed
     key: (req, file, cb) => {
       const filename = `custom_products/${Date.now()}-${Math.round(Math.random() * 1e9)}-${file.originalname}`;
       cb(null, filename);
     },
   }),
 });
+
 
 
 
@@ -427,14 +428,13 @@ app.get("/api/products/search/:query", async (req, res) => {
 });
 
 // Add product
-
-
 app.post("/api/products", uploadProduct.single("image"), async (req, res) => {
   try {
     const { productName, price, description, size, material, category_id, stock, is_available } = req.body;
 
     const newId = `PROD_${Date.now()}`;
-    const imagePath = req.file ? `/uploads/products/${req.file.filename}` : null;
+    // S3 upload returns `req.file.key` for the object path
+    const imagePath = req.file ? (req.file as any).key : null;
 
     // Insert product
     await pool.query(
@@ -1287,9 +1287,9 @@ app.put("/api/user/addresses/:id", requireLogin, async (req, res) => {
   }
 });
 
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT ? Number(process.env.PORT) : 3001;
 
 const BACKEND_URL = process.env.BACKEND_URL || `http://localhost:${PORT}`;
 
-app.listen(PORT, () => console.log(`BackEnd: ${BACKEND_URL}/api/products`));
+app.listen(PORT, '0.0.0.0', () => console.log(`BackEnd: ${BACKEND_URL}/api/products`));
 
