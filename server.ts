@@ -85,6 +85,7 @@ const allowedOrigins = [
   "http://localhost:5173",
   "http://44.222.93.126:5173",
   "http://3.80.161.134",
+  "http://duckkey-load-balancer-936664961.us-east-1.elb.amazonaws.com",
   process.env.FRONTEND_URL
 ];
 
