@@ -19,20 +19,20 @@ const s3 = new S3Client({
   },
 });
 
-const uploadS3 = multer({
-  storage: multerS3({
-    s3,
-    bucket: process.env.AWS_BUCKET_NAME!,
-    contentType: multerS3.AUTO_CONTENT_TYPE,
-    // acl removed
-    key: (req, file, cb) => {
-      const timestamp = Date.now();
-      const ext = path.extname(file.originalname);
-      const filename = `${timestamp}-${Math.round(Math.random() * 1e9)}${ext}`;
-      cb(null, filename);
-    },
-  }),
-});
+// const uploadS3 = multer({
+//   storage: multerS3({
+//     s3,
+//     bucket: process.env.AWS_BUCKET_NAME!,
+//     contentType: multerS3.AUTO_CONTENT_TYPE,
+//     // acl removed
+//     key: (req, file, cb) => {
+//       const timestamp = Date.now();
+//       const ext = path.extname(file.originalname);
+//       const filename = `${timestamp}-${Math.round(Math.random() * 1e9)}${ext}`;
+//       cb(null, filename);
+//     },
+//   }),
+// });
 
 const uploadProduct = multer({
   storage: multerS3({
@@ -42,7 +42,7 @@ const uploadProduct = multer({
     key: (req, file, cb) => {
       const timestamp = Date.now();
       const ext = path.extname(file.originalname);
-      const filename = `products/${timestamp}-${Math.round(Math.random() * 1e9)}${ext}`;
+      const filename = `uploads/products/${timestamp}-${Math.round(Math.random() * 1e9)}${ext}`;
       cb(null, filename);
     },
   }),
@@ -57,7 +57,7 @@ const upload = multer({
     key: (req, file, cb) => {
       const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
       const ext = path.extname(file.originalname);
-      cb(null, `slips/${uniqueSuffix}${ext}`);
+      cb(null, `uploads/slips/${uniqueSuffix}${ext}`);
     },
   }),
 });
@@ -68,7 +68,7 @@ const uploadCustom = multer({
     bucket: process.env.AWS_BUCKET_NAME!,
     // acl removed
     key: (req, file, cb) => {
-      const filename = `custom_products/${Date.now()}-${Math.round(Math.random() * 1e9)}-${file.originalname}`;
+      const filename = `uploads/custom_products/${Date.now()}-${Math.round(Math.random() * 1e9)}-${file.originalname}`;
       cb(null, filename);
     },
   }),
@@ -83,7 +83,9 @@ const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
 
 const allowedOrigins = [
   "http://localhost:5173",
-  "http://44.222.93.126:5173"
+  "http://44.222.93.126:5173",
+  "http://3.80.161.134",
+  process.env.FRONTEND_URL
 ];
 
 app.use(cors({
@@ -277,8 +279,6 @@ app.put("/api/update-user", requireLogin, async (req, res) => {
         
         finalPassword = await bcrypt.hash(newPassword, 10); // hash new password
       }
-
-      finalPassword = newPassword;
     }
 
     // Update query
@@ -447,9 +447,10 @@ app.post("/api/products", uploadProduct.single("image"), async (req, res) => {
 
     // Insert image
     if (imagePath) {
+      const normalizedImagePath = imagePath?.startsWith("/") ? imagePath : `/${imagePath}`;
       await pool.query(
         `INSERT INTO main_productimage (product_id, "imgURL") VALUES ($1, $2)`,
-        [newId, imagePath]
+        [newId, normalizedImagePath]
       );
     }
 
@@ -980,12 +981,15 @@ app.post("/api/payment-details", requireLogin, upload.single("transferSlip"), as
     if (!req.file) return res.status(400).json({ error: "No file uploaded" });
     if (!order_id) return res.status(400).json({ error: "order_id is required" });
 
-    const filePath = `/uploads/slips/${req.file.filename}`;
+    // const filePath = `/uploads/slips/${req.file.filename}`;
+    const filePath = (req.file as any).key || "";
+    const normalizedImagePath = filePath?.startsWith("/") ? filePath : `/${filePath}`;
+
 
     const result = await pool.query(
       `INSERT INTO main_paymentdetail ("totalPrice", "transferSlip", "paymentDate", order_id)
       VALUES ($1,$2,$3,$4) RETURNING *`,
-      [totalPrice, filePath, paymentDate, Number(order_id)]
+      [totalPrice, normalizedImagePath, paymentDate, Number(order_id)]
     );
 
     res.json(result.rows[0]);
